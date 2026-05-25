@@ -26,6 +26,35 @@ app.get("/", (req, res) => {
   res.send("Customer API running");
 });
 
+app.get("/customers/search", checkJwt, async (req, res) => {
+  try {
+
+    const { name } = req.query;
+
+    const result = await pool.query(
+      `
+      SELECT *
+      FROM customers
+      WHERE
+        customer_name ILIKE $1
+        OR business_name ILIKE $1
+      `,
+      [`%${name}%`]
+    );
+
+    res.json(result.rows);
+
+  } catch (err) {
+
+    console.error(err);
+
+    res.status(500).json({
+      error: "Search failed"
+    });
+
+  }
+});
+
 app.get("/customers", checkJwt, async (req, res) => {
   try {
     const result = await pool.query(
