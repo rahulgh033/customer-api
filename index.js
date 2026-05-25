@@ -75,6 +75,51 @@ app.post("/customers", async (req, res) => {
   }
 });
 
+app.put("/customers/:customer_id", async (req, res) => {
+  try {
+    const { customer_id } = req.params;
+
+    const {
+      business_name,
+      customer_name,
+      address,
+      phone,
+      email,
+    } = req.body;
+
+    const result = await pool.query(
+      `
+      UPDATE customers
+      SET
+        business_name = $1,
+        customer_name = $2,
+        address = $3,
+        phone = $4,
+        email = $5
+      WHERE customer_id = $6
+      RETURNING *
+      `,
+      [
+        business_name,
+        customer_name,
+        address,
+        phone,
+        email,
+        customer_id,
+      ]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "Customer not found" });
+    }
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Update failed" });
+  }
+});
+
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
