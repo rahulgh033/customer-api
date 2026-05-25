@@ -1,5 +1,6 @@
 
 require("dotenv").config();
+const { auth } = require("express-oauth2-jwt-bearer");
 const express = require("express");
 const cors = require("cors");
 const { Pool } = require("pg");
@@ -8,6 +9,11 @@ const app = express();
 
 app.use(cors());
 app.use(express.json());
+
+const checkJwt = auth({
+  audience: process.env.AUTH0_AUDIENCE,
+  issuerBaseURL: process.env.AUTH0_ISSUER_BASE_URL,
+});
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -20,7 +26,7 @@ app.get("/", (req, res) => {
   res.send("Customer API running");
 });
 
-app.get("/customers", async (req, res) => {
+app.get("/customers", checkJwt, async (req, res) => {
   try {
     const result = await pool.query(
       "SELECT * FROM customers ORDER BY id"
@@ -33,7 +39,7 @@ app.get("/customers", async (req, res) => {
   }
 });
 
-app.post("/customers", async (req, res) => {
+app.post("/customers", checkJwt, async (req, res) => {
   try {
     const {
       customer_id,
@@ -75,7 +81,7 @@ app.post("/customers", async (req, res) => {
   }
 });
 
-app.put("/customers/:customer_id", async (req, res) => {
+app.put("/customers/:customer_id", checkJwt, async (req, res) => {
   try {
     const { customer_id } = req.params;
 
@@ -120,7 +126,7 @@ app.put("/customers/:customer_id", async (req, res) => {
   }
 });
 
-app.delete("/customers/:customer_id", async (req, res) => {
+app.delete("/customers/:customer_id", checkJwt, async (req, res) => {
   try {
     const { customer_id } = req.params;
 
