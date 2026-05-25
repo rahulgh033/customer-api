@@ -8,11 +8,11 @@ app.use(express.json());
 const customers = [
   {
     id: "CUST-1001",
-    businessName: "ABC Convenience Store",
-    customerName: "John Sample",
-    address: "123 Sample Street, Toronto, ON",
+    businessName: "BITBPM Tech Solutions",
+    customerName: "Rahul G",
+    address: "123 Kariya Dr, Mississauga, ON",
     phone: "416-555-1234",
-    email: "john@example.com"
+    email: "rahulg@bitbpm.com"
   }
 ];
 
