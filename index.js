@@ -120,6 +120,39 @@ app.put("/customers/:customer_id", async (req, res) => {
   }
 });
 
+app.delete("/customers/:customer_id", async (req, res) => {
+  try {
+    const { customer_id } = req.params;
+
+    const result = await pool.query(
+      `
+      DELETE FROM customers
+      WHERE customer_id = $1
+      RETURNING *
+      `,
+      [customer_id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        error: "Customer not found",
+      });
+    }
+
+    res.json({
+      message: "Customer deleted successfully",
+      deletedCustomer: result.rows[0],
+    });
+
+  } catch (err) {
+    console.error(err);
+
+    res.status(500).json({
+      error: "Delete failed",
+    });
+  }
+});
+
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
