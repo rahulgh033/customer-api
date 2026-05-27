@@ -7,6 +7,9 @@ const { Pool } = require("pg");
 
 const app = express();
 
+const swaggerUi = require("swagger-ui-express");
+const swaggerJsdoc = require("swagger-jsdoc");
+
 app.use(cors());
 app.use(express.json());
 
@@ -14,6 +17,7 @@ const checkJwt = auth({
   audience: process.env.AUTH0_AUDIENCE,
   issuerBaseURL: process.env.AUTH0_ISSUER_BASE_URL,
 });
+
 
 async function logAudit(req, actionType, customerId) {
   const ip =
@@ -55,9 +59,68 @@ const pool = new Pool({
   },
 });
 
+const options = {
+  definition: {
+    openapi: "3.0.0",
+    info: {
+      title: "Customer API *** built by rahul g - for proof of concept mock API",
+      version: "1.0.0",
+      description: "Secure OAuth Customer Management API"
+    },
+    servers: [
+      {
+        url: "https://customer-api-79au.onrender.com"
+      }
+    ],
+    components: {
+      securitySchemes: {
+        bearerAuth: {
+          type: "http",
+          scheme: "bearer",
+          bearerFormat: "JWT"
+        }
+      }
+    },
+    security: [
+      {
+        bearerAuth: []
+      }
+    ]
+  },
+  apis: ["./index.js"]
+};
+
+const specs = swaggerJsdoc(options);
+
+app.use(
+  "/api-docs",
+  swaggerUi.serve,
+  swaggerUi.setup(specs)
+);
+
 app.get("/", (req, res) => {
   res.send("Customer API running *** built by rahul g - for proof of concept mock API");
 });
+
+/**
+ * @swagger
+ * /customers/search:
+ *   get:
+ *     summary: Search customers
+ *     description: Search by customer name or business name
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: name
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: Customer or business name
+ *     responses:
+ *       200:
+ *         description: Matching customers returned
+ */
 
 app.get("/customers/search", checkJwt, requiredScopes("read:customers"), async (req, res) => {
   try {
@@ -91,6 +154,18 @@ await logAudit(req, "CUSTOMER-NAME-SEARCH", name);
   }
 });
 
+/**
+ * @swagger
+ * /customers:
+ *   get:
+ *     summary: Get all customers
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of customers
+ */
+
 app.get("/customers", checkJwt,  requiredScopes("read:customers"), async (req, res) => {
   try {
     const result = await pool.query(
@@ -105,6 +180,38 @@ await logAudit(req, "CUSTOMER-ALL-SEARCH", "ALL CUSTOMERS");
     res.status(500).json({ error: "Database error" });
   }
 });
+
+/**
+ * @swagger
+ * /customers:
+ *   post:
+ *     summary: Create customer
+ *     description: Creates a new customer record
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               customer_id:
+ *                 type: string
+ *               business_name:
+ *                 type: string
+ *               customer_name:
+ *                 type: string
+ *               address:
+ *                 type: string
+ *               phone:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Customer created successfully
+ */
 
 app.post("/customers", checkJwt, requiredScopes("write:customers"), async (req, res) => {
   try {
@@ -150,7 +257,42 @@ await logAudit(req, "CUSTOMER-INSERT", customer_id);
     res.status(500).json({ error: "Insert failed" });
   }
 });
-
+/**
+ * @swagger
+ * /customers/{customer_id}:
+ *   put:
+ *     summary: Update customer
+ *     description: Updates customer details
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: customer_id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Customer ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               business_name:
+ *                 type: string
+ *               customer_name:
+ *                 type: string
+ *               address:
+ *                 type: string
+ *               phone:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Customer updated successfully
+ */
 app.put("/customers/:customer_id", checkJwt, requiredScopes("write:customers"), async (req, res) => {
   try {
     const { customer_id } = req.params;
@@ -198,7 +340,25 @@ await logAudit(req, "CUSTOMER-UPDATE", customer_id);
     res.status(500).json({ error: "Update failed" });
   }
 });
-
+/**
+ * @swagger
+ * /customers/{customer_id}:
+ *   delete:
+ *     summary: Delete customer
+ *     description: Deletes a customer record
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: customer_id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Customer ID
+ *     responses:
+ *       200:
+ *         description: Customer deleted successfully
+ */
 app.delete("/customers/:customer_id", checkJwt, requiredScopes("delete:customers"), async (req, res) => {
   try {
     const { customer_id } = req.params;

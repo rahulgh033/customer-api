@@ -15,6 +15,8 @@
       "dotenv": "^17.4.2",
       "express": "^5.2.1",
       "express-oauth2-jwt-bearer": "^1.9.0",
-      "pg": "^8.21.0"
+      "pg": "^8.21.0",
+      "swagger-jsdoc": "^6.3.0",
+      "swagger-ui-express": "^5.0.1"
    }
 }
