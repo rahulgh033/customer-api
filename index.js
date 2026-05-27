@@ -15,6 +15,39 @@ const checkJwt = auth({
   issuerBaseURL: process.env.AUTH0_ISSUER_BASE_URL,
 });
 
+async function logAudit(req, actionType, customerId) {
+  const ip =
+    req.headers["x-forwarded-for"]?.split(",")[0] ||
+    req.socket.remoteAddress ||
+    "unknown";
+
+  const clientName =
+    req.auth?.payload?.azp ||
+    req.auth?.payload?.sub ||
+    "unknown-client";
+
+  await pool.query(
+    `
+    INSERT INTO customer_audit_log
+    (
+      action_type,
+      customer_id,
+      performed_by,
+      ip_address,
+      client_name
+    )
+    VALUES ($1, $2, $3, $4, $5)
+    `,
+    [
+      actionType,
+      customerId,
+      clientName,
+      ip,
+      clientName
+    ]
+  );
+}
+
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: {
@@ -42,6 +75,9 @@ app.get("/customers/search", checkJwt, requiredScopes("read:customers"), async (
       [`%${name}%`]
     );
 
+await logAudit(req, "CUSTOMER-NAME-SEARCH", customer_id);
+
+
     res.json(result.rows);
 
   } catch (err) {
@@ -60,6 +96,8 @@ app.get("/customers", checkJwt,  requiredScopes("read:customers"), async (req, r
     const result = await pool.query(
       "SELECT * FROM customers ORDER BY id"
     );
+
+await logAudit(req, "CUSTOMER-ALL-SEARCH", customer_id);
 
     res.json(result.rows);
   } catch (err) {
@@ -102,6 +140,9 @@ app.post("/customers", checkJwt, requiredScopes("write:customers"), async (req, 
         email,
       ]
     );
+
+await logAudit(req, "CUSTOMER-INSERT", customer_id);
+
 
     res.json(result.rows[0]);
   } catch (err) {
@@ -148,6 +189,9 @@ app.put("/customers/:customer_id", checkJwt, requiredScopes("write:customers"), 
       return res.status(404).json({ error: "Customer not found" });
     }
 
+await logAudit(req, "CUSTOMER-UPDATE", customer_id);
+
+
     res.json(result.rows[0]);
   } catch (err) {
     console.error(err);
@@ -173,6 +217,9 @@ app.delete("/customers/:customer_id", checkJwt, requiredScopes("delete:customers
         error: "Customer not found",
       });
     }
+
+await logAudit(req, "CUSTOMER-DELETE", customer_id);
+
 
     res.json({
       message: "Customer deleted successfully",
