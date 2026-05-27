@@ -1,6 +1,6 @@
 
 require("dotenv").config();
-const { auth } = require("express-oauth2-jwt-bearer");
+const { auth, requiredScopes } = require("express-oauth2-jwt-bearer");
 const express = require("express");
 const cors = require("cors");
 const { Pool } = require("pg");
@@ -23,10 +23,10 @@ const pool = new Pool({
 });
 
 app.get("/", (req, res) => {
-  res.send("Customer API running");
+  res.send("Customer API running *** built by rahul g - for proof of concept mock API");
 });
 
-app.get("/customers/search", checkJwt, async (req, res) => {
+app.get("/customers/search", checkJwt, requiredScopes("read:customers"), async (req, res) => {
   try {
 
     const { name } = req.query;
@@ -55,7 +55,7 @@ app.get("/customers/search", checkJwt, async (req, res) => {
   }
 });
 
-app.get("/customers", checkJwt, async (req, res) => {
+app.get("/customers", checkJwt,  requiredScopes("read:customers"), async (req, res) => {
   try {
     const result = await pool.query(
       "SELECT * FROM customers ORDER BY id"
@@ -68,7 +68,7 @@ app.get("/customers", checkJwt, async (req, res) => {
   }
 });
 
-app.post("/customers", checkJwt, async (req, res) => {
+app.post("/customers", checkJwt, requiredScopes("write:customers"), async (req, res) => {
   try {
     const {
       customer_id,
@@ -110,7 +110,7 @@ app.post("/customers", checkJwt, async (req, res) => {
   }
 });
 
-app.put("/customers/:customer_id", checkJwt, async (req, res) => {
+app.put("/customers/:customer_id", checkJwt, requiredScopes("write:customers"), async (req, res) => {
   try {
     const { customer_id } = req.params;
 
@@ -155,7 +155,7 @@ app.put("/customers/:customer_id", checkJwt, async (req, res) => {
   }
 });
 
-app.delete("/customers/:customer_id", checkJwt, async (req, res) => {
+app.delete("/customers/:customer_id", checkJwt, requiredScopes("delete:customers"), async (req, res) => {
   try {
     const { customer_id } = req.params;
 
