@@ -97,7 +97,7 @@ app.get("/customers", checkJwt,  requiredScopes("read:customers"), async (req, r
       "SELECT * FROM customers ORDER BY id"
     );
 
-await logAudit(req, "CUSTOMER-ALL-SEARCH", customer_id);
+await logAudit(req, "CUSTOMER-ALL-SEARCH", "ALL CUSTOMERS");
 
     res.json(result.rows);
   } catch (err) {
