@@ -75,7 +75,7 @@ app.get("/customers/search", checkJwt, requiredScopes("read:customers"), async (
       [`%${name}%`]
     );
 
-await logAudit(req, "CUSTOMER-NAME-SEARCH", customer_id);
+await logAudit(req, "CUSTOMER-NAME-SEARCH", name);
 
 
     res.json(result.rows);
