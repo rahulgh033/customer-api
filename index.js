@@ -167,11 +167,11 @@ app.put("/customers/:customer_id", checkJwt, requiredScopes("write:customers"), 
       `
       UPDATE customers
       SET
-        business_name = $1,
-        customer_name = $2,
-        address = $3,
-        phone = $4,
-        email = $5
+        business_name = COALESCE($1, business_name),
+        customer_name = COALESCE($2, customer_name),
+        address = COALESCE($3, address),
+        phone = COALESCE($4, phone),
+        email = COALESCE($5, email)
       WHERE customer_id = $6
       RETURNING *
       `,
