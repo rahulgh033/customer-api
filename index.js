@@ -395,6 +395,138 @@ await logAudit(req, "CUSTOMER-DELETE", customer_id);
   }
 });
 
+/**
+ * @swagger
+ * /washrooms:
+ *   get:
+ *     summary: Get all public washrooms
+ *     description: Returns public washrooms. Optionally filter by city.
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: city
+ *         required: false
+ *         schema:
+ *           type: string
+ *         description: Filter washrooms by city
+ *     responses:
+ *       200:
+ *         description: List of public washrooms
+ */
+
+app.get("/washrooms", checkJwt, requiredScopes("read:customers"), async (req, res) => {
+  try {
+    const { city } = req.query;
+
+    let result;
+
+    if (city) {
+      result = await pool.query(
+        `
+        SELECT *
+        FROM public_washrooms
+        WHERE city ILIKE $1
+        ORDER BY name
+        `,
+        [`%${city}%`]
+      );
+    } else {
+      result = await pool.query(
+        `
+        SELECT *
+        FROM public_washrooms
+        ORDER BY city, name
+        `
+      );
+    }
+
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to fetch washrooms" });
+  }
+});
+
+/**
+ * @swagger
+ * /washrooms/accessible:
+ *   get:
+ *     summary: Get accessible washrooms
+ *     description: Returns washrooms marked as accessible.
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Accessible washrooms returned successfully
+ */
+
+app.get("/washrooms/accessible", checkJwt, requiredScopes("read:customers"), async (req, res) => {
+  try {
+    const result = await pool.query(
+      `
+      SELECT *
+      FROM public_washrooms
+      WHERE accessible = true
+      ORDER BY city, name
+      `
+    );
+
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to fetch accessible washrooms" });
+  }
+});
+
+/**
+ * @swagger
+ * /washrooms/{id}:
+ *   get:
+ *     summary: Get washroom by ID
+ *     description: Returns one public washroom by database ID.
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Washroom ID
+ *     responses:
+ *       200:
+ *         description: Washroom returned successfully
+ *       404:
+ *         description: Washroom not found
+ */
+
+app.get("/washrooms/:id", checkJwt, requiredScopes("read:customers"), async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const result = await pool.query(
+      `
+      SELECT *
+      FROM public_washrooms
+      WHERE id = $1
+      `,
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "Washroom not found" });
+    }
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to fetch washroom" });
+  }
+});
+
+
+
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
