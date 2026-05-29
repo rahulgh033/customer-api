@@ -441,6 +441,12 @@ app.get("/washrooms", checkJwt, requiredScopes("read:customers"), async (req, re
       );
     }
 
+if (city) {
+  await logAudit(req, "WASHROOM-CITY-SEARCH", city);
+} else {
+  await logAudit(req, "WASHROOM-ALL-SEARCH", "ALL_WASHROOMS");
+}
+
     res.json(result.rows);
   } catch (err) {
     console.error(err);
@@ -471,6 +477,9 @@ app.get("/washrooms/accessible", checkJwt, requiredScopes("read:customers"), asy
       ORDER BY city, name
       `
     );
+
+await logAudit(req, "WASHROOM-ACCESSIBLE-SEARCH", "ACCESSIBLE_ONLY");
+
 
     res.json(result.rows);
   } catch (err) {
@@ -517,6 +526,9 @@ app.get("/washrooms/:id", checkJwt, requiredScopes("read:customers"), async (req
     if (result.rows.length === 0) {
       return res.status(404).json({ error: "Washroom not found" });
     }
+
+await logAudit(req, "WASHROOM-READ-BY-ID", id);
+
 
     res.json(result.rows[0]);
   } catch (err) {
