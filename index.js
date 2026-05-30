@@ -490,6 +490,101 @@ await logAudit(req, "WASHROOM-ACCESSIBLE-SEARCH", "ACCESSIBLE_ONLY");
 
 /**
  * @swagger
+ * /washrooms/nearby:
+ *   get:
+ *     summary: Find nearby washrooms
+ *     description: Returns public washrooms closest to a latitude/longitude point.
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: lat
+ *         required: true
+ *         schema:
+ *           type: number
+ *         description: User latitude
+ *       - in: query
+ *         name: lng
+ *         required: true
+ *         schema:
+ *           type: number
+ *         description: User longitude
+ *       - in: query
+ *         name: limit
+ *         required: false
+ *         schema:
+ *           type: integer
+ *         description: Number of nearby washrooms to return
+ *     responses:
+ *       200:
+ *         description: Nearby washrooms returned successfully
+ */
+app.get("/washrooms/nearby", checkJwt, requiredScopes("read:customers"), async (req, res) => {
+  try {
+    const { lat, lng, limit } = req.query;
+
+    if (!lat || !lng) {
+      return res.status(400).json({
+        error: "lat and lng are required. Example: /washrooms/nearby?lat=43.5890&lng=-79.6441"
+      });
+    }
+
+    const maxResults = limit || 5;
+
+    const result = await pool.query(
+      `
+      SELECT
+        id,
+        source_id,
+        name,
+        address,
+        city,
+        latitude,
+        longitude,
+        accessible,
+        hours,
+        open_season,
+        source_url,
+        created_at,
+        (
+          6371 * acos(
+            cos(radians($1)) *
+            cos(radians(latitude)) *
+            cos(radians(longitude) - radians($2)) +
+            sin(radians($1)) *
+            sin(radians(latitude))
+          )
+        ) AS distance_km
+      FROM public_washrooms
+      WHERE latitude IS NOT NULL
+        AND longitude IS NOT NULL
+      ORDER BY distance_km
+      LIMIT $3
+      `,
+      [
+        parseFloat(lat),
+        parseFloat(lng),
+        parseInt(maxResults)
+      ]
+    );
+
+    await logAudit(req, "WASHROOM-NEARBY-SEARCH", `lat=${lat},lng=${lng}`);
+
+    res.json(result.rows);
+
+  } catch (err) {
+    console.error("Nearby washroom search error:", err.message);
+
+    res.status(500).json({
+      error: "Failed to fetch nearby washrooms",
+      details: err.message
+    });
+  }
+});
+
+
+/**
+ * @swagger
  * /washrooms/{id}:
  *   get:
  *     summary: Get washroom by ID
